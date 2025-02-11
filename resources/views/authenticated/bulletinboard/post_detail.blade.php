@@ -4,12 +4,17 @@
   <div class="w-50 mt-5">
     <div class="m-3 detail_container">
       <div class="p-3">
+        @foreach($errors->all() as $error)
+        <li class="text-danger">{{$error}}</li>
+        @endforeach
         <div class="detail_inner_head">
           <div>
           </div>
           <div>
-            <span class="edit-modal-open" post_title="{{ $post->post_title }}" post_body="{{ $post->post }}" post_id="{{ $post->id }}">編集</span>
-            <a href="{{ route('post.delete', ['id' => $post->id]) }}">削除</a>
+            @if($post->user_id == Auth::user()->id)
+            <span class="edit-modal-open" post_title="{{ $post->post_title }}" post_body="{{ $post->post }}" post_id="{{ $post->id }} ">編集</span>
+            <a href="{{ route('post.delete', ['id' => $post->id]) }}" onclick="return confirm('この投稿を削除しますか。よろしいですか？')">削除</a>
+            @endif
           </div>
         </div>
 
