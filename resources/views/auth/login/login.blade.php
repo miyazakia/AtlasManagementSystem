@@ -13,7 +13,8 @@
   <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
 </head>
 <body>
-  <form action="{{ route('loginPost') }}" method="POST">
+  <form action="{{ route('loginPost') }}" method="POST" style="background-color:#ecf1f6">
+    <img class="icon" width="190" height="75" src="{{ asset('image/atlas-black.png') }}" alt="アイコン">
     <div class="w-100 vh-100 d-flex" style="align-items:center; justify-content:center;">
       <div class="border vh-50 w-25">
         <div class="w-75 m-auto pt-5">
