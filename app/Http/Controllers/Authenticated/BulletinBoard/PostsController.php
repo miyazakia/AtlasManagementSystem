@@ -16,24 +16,37 @@ use Auth;
 class PostsController extends Controller
 {
     public function show(Request $request){
-        $posts = Post::with('user', 'postComments')->get();
+        $posts = Post::with('user', 'postComments','subCategories')->get();
         $categories = MainCategory::get();
         $like = new Like;
         $post_comment = new Post;
-        if(!empty($request->keyword)){
+
+        if(!empty($request->keyword)){// 検索ワードがある場合
             $posts = Post::with('user', 'postComments')
             ->where('post_title', 'like', '%'.$request->keyword.'%')
-            ->orWhere('post', 'like', '%'.$request->keyword.'%')->get();
-        }else if($request->category_word){
-            $sub_category = $request->category_word;
-            $posts = Post::with('user', 'postComments')->get();
+            ->orWhere('post', 'like', '%'.$request->keyword.'%')
+            ->orWhereHas('subCategories', function($query) use($request){
+                $query->where('sub_category', '=', $request->keyword);
+            })
+            ->get();
+
+        }else if($request->category_word){ // カテゴリーが選択された場合
+            $posts = Post::whereHas('subCategories',function($query) use($request){
+                $query->where('sub_categories.id', '=', $request->category_word);  // どこのIDかわかるようにサブカテゴリーのIDを指定
+            })
+            ->with('user', 'postComments' ,'subCategories')
+            ->get();
+
         }else if($request->like_posts){
             $likes = Auth::user()->likePostId()->get('like_post_id');
             $posts = Post::with('user', 'postComments')
-            ->whereIn('id', $likes)->get();
+            ->whereIn('id', $likes)
+            ->get();
+
         }else if($request->my_posts){
             $posts = Post::with('user', 'postComments')
-            ->where('user_id', Auth::id())->get();
+            ->where('user_id', Auth::id())
+            ->get();
         }
         return view('authenticated.bulletinboard.posts', compact('posts', 'categories', 'like', 'post_comment'));
     }
@@ -44,7 +57,7 @@ class PostsController extends Controller
     }
 
     public function postInput(){
-        $main_categories = MainCategory::get();
+        $main_categories = MainCategory::with('subCategories')->get();
         return view('authenticated.bulletinboard.post_create', compact('main_categories'));
     }
 
@@ -54,6 +67,10 @@ class PostsController extends Controller
             'post_title' => $request->post_title,
             'post' => $request->post_body
         ]);
+
+        // 投稿とサブカテゴリーを関連付け（中間テーブルにデータを追加）
+        $post->subCategories()->attach($request->post_category_id);
+
         return redirect()->route('post.show');
     }
 
@@ -81,8 +98,32 @@ class PostsController extends Controller
         return redirect()->route('post.show');
     }
     public function mainCategoryCreate(Request $request){
+        $validatedData = $request->validate([
+            'main_category_name' => 'required|string|unique:main_categories,main_category|max:100',
+        ],[
+            'main_category_name.required' => 'メインカテゴリー名は必須です',
+            'main_category_name.max' => 'メインカテゴリー名は100文字以内で入力してください',
+            'main_category_name.unique' => 'そのメインカテゴリー名は既に登録されています',
+        ]);
+
         MainCategory::create(['main_category' => $request->main_category_name]);
         return redirect()->route('post.input');
+    }
+// subCategoryCreateメソッドを追加
+    public function subCategoryCreate(Request $request){
+        $validatedData = $request->validate([
+            'sub_category_name' => 'required|string|unique:sub_categories,sub_category|max:100',
+        ],[
+            'sub_category_name.required' => 'サブカテゴリー名は必須です',
+            'sub_category_name.max' => 'サブカテゴリー名は100文字以内で入力してください',
+            'sub_category_name.unique' => 'そのサブカテゴリー名は既に登録されています',
+        ]);
+
+    SubCategory::create([
+        'main_category_id' => $request->main_category_id,
+        'sub_category' => $request->sub_category_name
+    ]);
+    return redirect()->route('post.input');
     }
 
     public function commentCreate(Request $request){
