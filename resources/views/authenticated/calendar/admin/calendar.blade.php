@@ -7,4 +7,5 @@
     <p>{!! $calendar->render() !!}</p>
   </div>
 </div>
+
 @endsection
